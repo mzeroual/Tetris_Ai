@@ -94,7 +94,7 @@ class TetrisEnv(gym.Env):
         
         # Get new state
         state = self.get_state()
-        if mode=="human":
+        # if mode=="human":
             
         return state, reward, done, {}
 
