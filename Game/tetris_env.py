@@ -27,41 +27,74 @@ class Figure:
         [[1, 4, 5, 6], [1, 4, 5, 9], [4, 5, 6, 9], [1, 5, 6, 9]],
         [[1, 2, 5, 6]],
     ]
+    
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.type = random.randint(0, len(self.figures) - 1)
+        self.color = random.randint(1, len(colors) - 1)
+        self.rotation = 0
+
+    def image(self):
+        return self.figures[self.type][self.rotation]
+
+    def rotate(self):
+        self.rotation = (self.rotation + 1) % len(self.figures[self.type])
 
 class TetrisEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
     def __init__(self):
         super(TetrisEnv, self).__init__()
-        self.board_width = 10
-        self.board_height = 20
+        self.width = 10
+        self.height = 20
         self.block_size = 30
-        self.board = np.zeros((self.board_height, self.board_width), dtype=int)
+        self.board = np.zeros((self.height, self.width), dtype=int)
         self.current_piece = None
         self.current_piece_position = [0, 0]
         
         # Define action and observation space
         self.action_space = spaces.Discrete(4)  # 0: left, 1: right, 2: down, 3: rotate
-        self.observation_space = spaces.Box(low=0, high=1, shape=(self.board_height, self.board_width), dtype=np.int)
+        self.observation_space = spaces.Box(low=0, high=1, shape=(self.height, self.width), dtype=np.int)
 
         # Pygame setup
         pygame.init()
-        self.screen = pygame.display.set_mode((self.board_width * self.block_size, self.board_height * self.block_size))
+        self.screen = pygame.display.set_mode((self.width * self.block_size, self.height * self.block_size))
         pygame.display.set_caption('Tetris')
         self.clock = pygame.time.Clock()
         
     def reset(self):
-        self.board = np.zeros((self.board_height, self.board_width), dtype=int)
+        self.board = np.zeros((self.height, self.width), dtype=int)
         self.current_piece = self.new_piece()
-        self.current_piece_position = [0, self.board_width // 2]
+        self.current_piece_position = [0, self.width // 2]
         return self.board
+
+    def break_lines(self):
+        lines = 0
+        for i in range(1, self.height):
+            zeros = 0
+            for j in range(self.width):
+                if self.field[i][j] == 0:
+                    zeros += 1
+            if zeros == 0:
+                lines += 1
+                for i1 in range(i, 1, -1):
+                    for j in range(self.width):
+                        self.field[i1][j] = self.field[i1 - 1][j]
+        self.score += lines ** 2
 
     def step(self, action):
         # Apply action
         if action == 0:  # Move left
+            old_x = self.current_piece_position[1]
             self.current_piece_position[1] -= 1
+            if self.intersects():
+                self.current_piece_position[1]=old_x
         elif action == 1:  # Move right
+            old_x = self.current_piece_position[1]
             self.current_piece_position[1] += 1
+            if self.intersects():
+                self.current_piece_position[1]=old_x
         elif action == 2:  # Move down
             self.current_piece_position[0] += 1
         elif action == 3:  # Rotate
@@ -82,8 +115,8 @@ class TetrisEnv(gym.Env):
         if mode == 'human':
             self.screen.fill((0, 0, 0))  # Fill the screen with black
             # Draw the board
-            for y in range(self.board_height):
-                for x in range(self.board_width):
+            for y in range(self.height):
+                for x in range(self.width):
                     rect = pygame.Rect(x * self.block_size, y * self.block_size, self.block_size, self.block_size)
                     pygame.draw.rect(self.screen, colors[self.board[y][x]], rect, 0)
 
@@ -93,7 +126,7 @@ class TetrisEnv(gym.Env):
                 y = i // 4
                 x_pos = self.current_piece_position[1] + x
                 y_pos = self.current_piece_position[0] + y
-                if 0 <= y_pos < self.board_height and 0 <= x_pos < self.board_width:
+                if 0 <= y_pos < self.height and 0 <= x_pos < self.width:
                     rect = pygame.Rect(x_pos * self.block_size, y_pos * self.block_size, self.block_size, self.block_size)
                     pygame.draw.rect(self.screen, colors[1], rect, 0)
 
