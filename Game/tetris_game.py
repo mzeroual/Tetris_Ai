@@ -32,7 +32,7 @@ class Figure:
         self.x = x
         self.y = y
         self.type = random.randint(0, len(self.figures) - 1)
-        self.color = random.randint(1, len(colors) - 1)
+        self.color = 2
         self.rotation = 0
 
     def image(self):
@@ -44,10 +44,12 @@ class Figure:
 class TetrisEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self):
+    def __init__(self,mode="human"):
         super(TetrisEnv, self).__init__()
+        self.mode=mode
         self.board_width = 10
         self.board_height = 20
+        self.zoom = 20
         self.board = np.zeros((self.board_height, self.board_width), dtype=int)
         self.current_piece = None
         self.current_piece_position = [0, 0]
@@ -55,16 +57,30 @@ class TetrisEnv(gym.Env):
         # Define action and observation space
         self.action_space = spaces.Discrete(4)  # 0: left, 1: right, 2: down, 3: rotate
         self.observation_space = spaces.Box(low=0, high=1, shape=(self.board_height, self.board_width), dtype=np.int)
+        if self.mode=="human":
+            # Initialize the game engine
+            pygame.init()
 
+            # Define some colors
+            BLACK = (0, 0, 0)
+            WHITE = (255, 255, 255)
+            GRAY = (128, 128, 128)
+
+            size = (400, 500)
+            screen = pygame.display.set_mode(size)
+
+            pygame.display.set_caption("Tetris")
+            
         self.reset()
 
     def reset(self):
+        self.score=0
         self.board = np.zeros((self.board_height, self.board_width), dtype=int)
         self.current_piece = Figure(0, self.board_width // 2)
         self.current_piece_position = [0, self.board_width // 2]
         return self.get_state()
 
-    def step(self, action,mode="human"):
+    def step(self, action):
         # Apply action
         if action == 0:  # Move left
             self.current_piece.x -= 1
@@ -94,28 +110,28 @@ class TetrisEnv(gym.Env):
         
         # Get new state
         state = self.get_state()
-        # if mode=="human":
-            
+        if self.mode=="human":
+            for i in range(self.height):
+                for j in range(self.width):
+                    pygame.draw.rect(screen, GRAY, [self.x + self.zoom * j, self.y + self.zoom * i, self.zoom, self.zoom], 1)
+                    if self.field[i][j] > 0:
+                        pygame.draw.rect(screen, colors[1],
+                                        [self.x + self.zoom * j + 1, self.y + game.zoom * i + 1, game.zoom - 2, game.zoom - 1])
+
+            if game.figure is not None:
+                for i in range(4):
+                    for j in range(4):
+                        p = i * 4 + j
+                        if p in self.current_piece.image():
+                            pygame.draw.rect(screen, colors[self.current_piece.color],
+                                            [self.x + self.zoom * (j + self.current_piece.x) + 1,
+                                            self.y + self.zoom * (i + self.current_piece.y) + 1,
+                                            self.zoom - 2, self.zoom - 2])
+            pygame.display.flip()
+            clock.tick(5)
         return state, reward, done, {}
 
-    def render(self, mode='human'):
-        pygame.init()
-        screen = pygame.display.set_mode((self.board_width * 30, self.board_height * 30))
-        pygame.display.set_caption("Tetris")
-        screen.fill((0, 0, 0))
 
-        for i in range(self.board_height):
-            for j in range(self.board_width):
-                pygame.draw.rect(screen, colors[self.board[i][j]], (j * 30, i * 30, 30, 30))
-
-        if self.current_piece is not None:
-            for i in range(4):
-                for j in range(4):
-                    if i * 4 + j in self.current_piece.image():
-                        pygame.draw.rect(screen, colors[self.current_piece.color],
-                                         ((self.current_piece.x + j) * 30, (self.current_piece.y + i) * 30, 30, 30))
-
-        pygame.display.flip()
 
     def new_piece(self):
         return Figure(0, self.board_width // 2)
@@ -159,15 +175,13 @@ class TetrisEnv(gym.Env):
     def is_game_over(self):
         for j in range(self.board_width):
             if self.board[0][j] > 0:
+                self.score=0
                 return True
         return False
 
     def calculate_reward(self):
         # Reward for clearing lines
-        reward = 0
-        for i in range(self.board_height):
-            if all(self.board[i]):
-                reward += 1
+        reward = self.score
         return reward
 
     def get_state(self):
