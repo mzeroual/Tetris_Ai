@@ -76,6 +76,7 @@ class TetrisEnv(gym.Env):
         return self.get_state()
 
     def step(self, action):
+        self.score=0
         # Apply action
         if action == 0:  # Move left
             self.current_piece.x -= 1
@@ -103,15 +104,16 @@ class TetrisEnv(gym.Env):
             self.current_piece.y -= 1
             self.freeze()
             
+        state = self.get_state()
         # Check for game over
         done = self.is_game_over()
-                
+        
+        self.break_lines()
         # Calculate reward
         reward = self.calculate_reward()
         
         
         # Get new state
-        state = self.get_state()
         if self.mode=="human": 
             clock = pygame.time.Clock()
             BLACK = (0, 0, 0)
@@ -136,15 +138,14 @@ class TetrisEnv(gym.Env):
                                             self.current_piece.y + self.zoom * (i + self.current_piece.y) + 1,
                                             self.zoom - 2, self.zoom - 2])
             pygame.display.flip()
-            clock.tick(30)
-        
+            clock.tick(40)
         print(reward)
         return state, reward, done, {}
 
 
 
     def new_piece(self):
-        self.score=self.score+1
+        # self.score=self.score+1
         return Figure(5,0)
 
     def intersects(self):
@@ -181,12 +182,14 @@ class TetrisEnv(gym.Env):
                 for i1 in range(i, 1, -1):
                     for j in range(self.width):
                         self.board[i1][j] = self.board[i1 - 1][j]
-        self.score += lines * 20
+        if lines>0:
+            print("00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
+            self.score =  1000
 
     def is_game_over(self):
         for j in range(self.width):
             if self.board[0][j] > 0:
-                self.score=0
+                self.score=-100
                 return True
         return False
 
@@ -197,6 +200,11 @@ class TetrisEnv(gym.Env):
 
     def get_state(self):
         state = np.copy(self.board)
+        for i in range(10):
+            for j in range(10):
+                if self.board[i][j]==1:
+                    self.score=-10
+                
         if self.current_piece is not None:
             for i in range(4):
                 for j in range(4):

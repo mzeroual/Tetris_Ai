@@ -3,20 +3,28 @@ from tetris_env import TetrisEnv
 import os
 import time
 
-
-
-# Create the environment
 env = TetrisEnv(mode="human")
 
-# Reset the environment
-state = env.reset()
+# check_env(env)
+models_dir="models/PPO"
+logdir="logs"
+if not os.path.exists(models_dir):
+    os.makedirs(models_dir)
+    
+if not os.path.exists(logdir):
+    os.makedirs(logdir)
+    
+eps=input("episode :")
+time_steps=10000
+model = PPO('MlpPolicy', env, verbose=1,learning_rate =1e-3,tensorboard_log=logdir)
+model_path=f"{models_dir}/{str(eps)}0000.zip"
+model = PPO.load(model_path,env=env)
 
-# Run the environment for a few steps
-for _ in range(100):
-    action = env.action_space.sample()  # Take a random action
-    state, reward, done, info = env.step(action)
-    print(state)
-
-    time.sleep(0.1)  # Add a small delay to see the rendering
-
-
+for i in range(10):
+    env=TetrisEnv(mode="human")
+    obs = env.reset()
+    while True :
+        action, _state= model.predict(obs)
+        obs, rewards, done, info = env.step(action)
+        if done :
+            break
