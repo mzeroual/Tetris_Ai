@@ -15,6 +15,7 @@ state = env.reset()
 for _ in range(100):
     action = env.action_space.sample()  # Take a random action
     state, reward, done, info = env.step(action)
+    print(state)
 
     time.sleep(0.1)  # Add a small delay to see the rendering
 

@@ -32,7 +32,7 @@ class Figure:
         self.x = x
         self.y = y
         self.type = random.randint(0, len(self.figures) - 1)
-        self.color = 2
+        self.color = 1
         self.rotation = 0
 
     def image(self):
@@ -97,11 +97,18 @@ class TetrisEnv(gym.Env):
                 self.current_piece.rotate()
                 self.current_piece.rotate()
         
+        # Move down 
+        self.current_piece.y += 1
+        if self.intersects():
+            self.current_piece.y -= 1
+            self.freeze()
+            
         # Check for game over
         done = self.is_game_over()
-        
+                
         # Calculate reward
         reward = self.calculate_reward()
+        
         
         # Get new state
         state = self.get_state()
@@ -129,13 +136,16 @@ class TetrisEnv(gym.Env):
                                             self.current_piece.y + self.zoom * (i + self.current_piece.y) + 1,
                                             self.zoom - 2, self.zoom - 2])
             pygame.display.flip()
-            clock.tick(5)
+            clock.tick(30)
+        
+        print(reward)
         return state, reward, done, {}
 
 
 
     def new_piece(self):
-        return Figure(0, self.width // 2)
+        self.score=self.score+1
+        return Figure(5,0)
 
     def intersects(self):
         intersection = False
@@ -171,7 +181,7 @@ class TetrisEnv(gym.Env):
                 for i1 in range(i, 1, -1):
                     for j in range(self.width):
                         self.board[i1][j] = self.board[i1 - 1][j]
-        self.score += lines ** 2
+        self.score += lines * 20
 
     def is_game_over(self):
         for j in range(self.width):
@@ -191,5 +201,5 @@ class TetrisEnv(gym.Env):
             for i in range(4):
                 for j in range(4):
                     if i * 4 + j in self.current_piece.image():
-                        state[self.current_piece.y + i][self.current_piece.x + j] = self.current_piece.color
+                        state[self.current_piece.y + i][self.current_piece.x + j] = 2
         return state
